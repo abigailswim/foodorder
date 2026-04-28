@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Order Share 分单 — SO26-024253</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -20,26 +21,57 @@
     header {
       background: #1a3a2a;
       color: #fff;
-      padding: 20px 24px 16px;
+      padding: 18px 20px 14px;
     }
-    header h1 { font-size: 1.25rem; font-weight: 700; letter-spacing: 0.02em; }
-    header p  { font-size: 0.8rem; opacity: 0.7; margin-top: 4px; }
+    header h1 { font-size: 1.2rem; font-weight: 700; }
+    header p  { font-size: 0.78rem; opacity: 0.7; margin-top: 3px; }
+
+    .header-meta {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
     .order-ref {
-      display: inline-block;
-      margin-top: 8px;
       background: rgba(255,255,255,0.15);
       border-radius: 4px;
-      padding: 3px 10px;
-      font-size: 0.78rem;
+      padding: 4px 10px;
+      font-size: 0.75rem;
       font-family: monospace;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.04em;
     }
+    .order-total {
+      background: rgba(255,220,100,0.25);
+      border: 1px solid rgba(255,220,100,0.4);
+      border-radius: 4px;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #ffe97a;
+      letter-spacing: 0.02em;
+    }
+    .invoice-btn {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.25);
+      color: #fff;
+      border-radius: 4px;
+      padding: 4px 12px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: background 0.15s;
+    }
+    .invoice-btn:hover { background: rgba(255,255,255,0.22); }
 
     /* ── Category headings ── */
     .category-header {
       background: #e8e4dc;
       padding: 10px 20px;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       font-weight: 700;
       letter-spacing: 0.08em;
       color: #555;
@@ -54,165 +86,168 @@
     .item-card {
       background: #fff;
       border-bottom: 1px solid #eee;
-      padding: 14px 20px;
+      padding: 12px 16px;
       display: grid;
       grid-template-columns: 1fr auto;
-      gap: 8px 16px;
+      gap: 6px 12px;
       align-items: center;
     }
     .item-card:hover { background: #fafaf8; }
 
     .item-info { min-width: 0; }
+    .item-name-cn { font-size: 0.95rem; color: #1a1a1a; font-weight: 500; }
     .item-name-en {
-      font-weight: 600;
-      font-size: 0.9rem;
+      font-size: 0.78rem;
+      color: #666;
+      margin-top: 1px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .item-name-cn {
-      font-size: 0.95rem;
-      color: #333;
-      margin-top: 1px;
-    }
-    .item-code {
-      font-size: 0.7rem;
-      color: #888;
-      font-family: monospace;
-      margin-top: 3px;
-    }
-    .item-pricing {
-      font-size: 0.75rem;
-      color: #555;
-      margin-top: 4px;
-    }
-    .item-pricing span { margin-right: 10px; }
+    .item-code { font-size: 0.68rem; color: #aaa; font-family: monospace; margin-top: 2px; }
+    .item-pricing { font-size: 0.74rem; color: #444; margin-top: 4px; }
+    .item-pricing strong { color: #1a3a2a; }
+    .price-sep { color: #ccc; margin: 0 6px; }
     .price-100g { color: #888; }
-    .item-stock {
-      font-size: 0.7rem;
-      color: #aaa;
-      margin-top: 2px;
-    }
+    .item-stock { font-size: 0.68rem; color: #bbb; margin-top: 2px; }
 
     /* ── Quantity control ── */
     .qty-control {
       display: flex;
       flex-direction: column;
       align-items: flex-end;
-      gap: 6px;
-      min-width: 120px;
+      gap: 5px;
+      min-width: 110px;
     }
     .qty-buttons {
       display: flex;
       align-items: center;
-      gap: 0;
       border: 1.5px solid #1a3a2a;
       border-radius: 6px;
       overflow: hidden;
     }
     .qty-btn {
-      width: 36px;
-      height: 36px;
-      background: none;
-      border: none;
-      font-size: 1.2rem;
-      font-weight: 300;
-      cursor: pointer;
-      color: #1a3a2a;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      width: 34px; height: 34px;
+      background: none; border: none;
+      font-size: 1.15rem; font-weight: 300;
+      cursor: pointer; color: #1a3a2a;
+      display: flex; align-items: center; justify-content: center;
       transition: background 0.1s;
     }
-    .qty-btn:hover { background: #e8f0ec; }
+    .qty-btn:hover  { background: #e8f0ec; }
     .qty-btn:active { background: #c8dcd0; }
     .qty-display {
-      min-width: 48px;
-      text-align: center;
-      font-size: 0.88rem;
-      font-weight: 600;
-      padding: 0 4px;
-      line-height: 36px;
-      color: #1a1a1a;
+      min-width: 44px; text-align: center;
+      font-size: 0.84rem; font-weight: 600;
+      padding: 0 3px; line-height: 34px;
       border-left: 1.5px solid #1a3a2a;
       border-right: 1.5px solid #1a3a2a;
     }
     .item-subtotal {
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: #1a3a2a;
-      text-align: right;
-      min-height: 18px;
+      font-size: 0.8rem; font-weight: 700;
+      color: #1a3a2a; text-align: right; min-height: 16px;
     }
-    .item-subtotal.zero { color: #ccc; font-weight: 400; }
+    .item-subtotal.zero { color: #ddd; font-weight: 400; }
 
-    /* ── Sticky footer total ── */
+    /* ── Sticky footer ── */
     .footer-bar {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: #1a3a2a;
-      color: #fff;
-      padding: 14px 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      box-shadow: 0 -3px 20px rgba(0,0,0,0.15);
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #1a3a2a; color: #fff;
+      padding: 12px 18px;
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: 0 -3px 20px rgba(0,0,0,0.18);
       z-index: 100;
     }
-    .footer-total-label { font-size: 0.8rem; opacity: 0.8; }
-    .footer-total-amount {
-      font-size: 1.6rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-    }
-    .footer-total-amount span { font-size: 0.9rem; font-weight: 400; margin-right: 2px; }
+    .footer-total-label { font-size: 0.78rem; opacity: 0.75; }
+    .footer-total-amount { font-size: 1.55rem; font-weight: 700; letter-spacing: -0.02em; }
+    .footer-total-amount span { font-size: 0.85rem; font-weight: 400; margin-right: 2px; }
+    .footer-actions { display: flex; gap: 8px; align-items: center; }
     .pdf-btn {
-      background: #fff;
-      color: #1a3a2a;
-      border: none;
-      border-radius: 8px;
-      padding: 10px 20px;
-      font-size: 0.85rem;
-      font-weight: 700;
-      cursor: pointer;
+      background: #fff; color: #1a3a2a;
+      border: none; border-radius: 7px;
+      padding: 9px 16px; font-size: 0.82rem; font-weight: 700;
+      cursor: pointer; white-space: nowrap;
       transition: background 0.15s, transform 0.1s;
-      white-space: nowrap;
     }
-    .pdf-btn:hover { background: #e8f0ec; }
+    .pdf-btn:hover  { background: #e8f0ec; }
     .pdf-btn:active { transform: scale(0.97); }
     .pdf-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    /* ── Empty state ── */
-    .empty-note {
-      text-align: center;
-      padding: 40px 20px;
-      color: #aaa;
-      font-size: 0.85rem;
-    }
-
-    /* ── Reset button ── */
-    .reset-area {
-      text-align: center;
-      padding: 20px;
-    }
-    .reset-btn {
-      background: none;
-      border: 1px solid #ccc;
-      color: #888;
-      border-radius: 6px;
-      padding: 8px 20px;
-      font-size: 0.8rem;
+    .reset-btn-footer {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.25);
+      color: #fff; border-radius: 7px;
+      padding: 9px 14px; font-size: 0.8rem;
       cursor: pointer;
     }
-    .reset-btn:hover { border-color: #999; color: #555; }
+    .reset-btn-footer:hover { background: rgba(255,255,255,0.2); }
+
+    /* ── PDF template (hidden, captured by html2canvas) ── */
+    #pdf-template {
+      display: none;
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      width: 800px;
+      background: #fff;
+      font-family: "PingFang SC", "Microsoft YaHei", "SimSun", "Noto Sans SC", sans-serif;
+      padding: 0;
+    }
+    .pt-header {
+      background: #1a3a2a;
+      color: #fff;
+      padding: 24px 32px 20px;
+    }
+    .pt-header h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+    .pt-header .pt-sub { font-size: 12px; opacity: 0.75; }
+    .pt-header .pt-meta { margin-top: 10px; font-size: 11px; opacity: 0.85; }
+    .pt-col-header {
+      background: #e8e4dc;
+      display: grid;
+      grid-template-columns: 1fr 120px 100px 120px;
+      padding: 8px 32px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .pt-col-header div:not(:first-child) { text-align: right; }
+    .pt-row {
+      display: grid;
+      grid-template-columns: 1fr 120px 100px 120px;
+      padding: 10px 32px;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 12px;
+      align-items: center;
+    }
+    .pt-row:nth-child(even) { background: #fafaf8; }
+    .pt-row div:not(:first-child) { text-align: right; }
+    .pt-row .pt-cn { font-size: 13px; color: #1a1a1a; font-weight: 500; }
+    .pt-row .pt-en { font-size: 10px; color: #888; margin-top: 2px; }
+    .pt-row .pt-code { font-size: 9px; color: #bbb; font-family: monospace; }
+    .pt-total-row {
+      background: #1a3a2a;
+      color: #fff;
+      display: grid;
+      grid-template-columns: 1fr 120px 100px 120px;
+      padding: 14px 32px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .pt-total-row div:not(:first-child) { text-align: right; }
+    .pt-footer {
+      padding: 14px 32px;
+      font-size: 9px;
+      color: #aaa;
+      border-top: 1px solid #eee;
+    }
 
     @media (max-width: 480px) {
-      .item-name-en { font-size: 0.82rem; }
-      .qty-control { min-width: 100px; }
-      .qty-btn { width: 32px; height: 32px; }
-      .qty-display { min-width: 40px; line-height: 32px; }
+      .item-name-cn { font-size: 0.88rem; }
+      .qty-control { min-width: 96px; }
+      .qty-btn { width: 30px; height: 30px; }
+      .qty-display { min-width: 36px; line-height: 30px; }
     }
   </style>
 </head>
@@ -221,33 +256,35 @@
 <header>
   <h1>Order Sharing &nbsp;|&nbsp; 分单</h1>
   <p>Select your share of this order / 请选择您的分量</p>
-  <div class="order-ref">SO26-024253 &nbsp;·&nbsp; 28 Apr 2026</div>
+  <div class="header-meta">
+    <span class="order-ref">SO26-024253 · 28 Apr 2026</span>
+    <span class="order-total">BrightView Total: HKD $11,787.80</span>
+    <a class="invoice-btn" href="invoice-SO26-024253.pdf" download>
+      ⬇ Invoice PDF
+    </a>
+  </div>
 </header>
 
 <div id="items-container"></div>
 
-<div class="reset-area">
-  <button class="reset-btn" onclick="resetAll()">Reset all / 全部重置</button>
-</div>
+<!-- Hidden PDF render template -->
+<div id="pdf-template"></div>
 
 <div class="footer-bar">
   <div>
     <div class="footer-total-label">Mr. Lin's Total &nbsp;林先生总计</div>
     <div class="footer-total-amount"><span>HKD</span> <span id="grand-total">0.00</span></div>
   </div>
-  <button class="pdf-btn" onclick="generatePDF()" id="pdf-btn">📄 Save PDF</button>
+  <div class="footer-actions">
+    <button class="reset-btn-footer" onclick="resetAll()">Reset 重置</button>
+    <button class="pdf-btn" onclick="generatePDF()" id="pdf-btn">📄 Save PDF</button>
+  </div>
 </div>
 
 <script>
-// ─────────────────────────────────────────────
-// ORDER DATA  (all 21 items from SO26-024253)
-// unit: 'kg' | 'pc' | 'tray' | 'box'
-// totalOrdered: maximum selectable (what was ordered)
-// step: increment size
-// gramsPerUnit: for per-100g calc (null = skip)
-// ─────────────────────────────────────────────
-const ORDER_DATE = '28 Apr 2026';
-const ORDER_REF  = 'SO26-024253';
+const ORDER_DATE  = '28 Apr 2026';
+const ORDER_REF   = 'SO26-024253';
+const ORDER_TOTAL = 'HKD $11,787.80';
 
 const categories = [
   {
@@ -257,56 +294,36 @@ const categories = [
         code: 'VLFR31863',
         nameEN: 'Frozen Veal Ossobuco Portion ~300g×3',
         nameCN: '冻小牛膝片',
-        unit: 'kg',
-        unitPrice: 222,
-        totalOrdered: 5,
-        step: 0.5,
-        gramsPerUnit: 1000,
-        note: '5 kg total',
+        unit: 'kg', unitPrice: 222, totalOrdered: 5, step: 0.5,
+        gramsPerUnit: 1000, note: '5 kg total',
       },
       {
         code: 'BFFR34855',
         nameEN: 'Frozen Grass-Fed Beef Brisket',
         nameCN: '冻草饲牛胸肉',
-        unit: 'kg',
-        unitPrice: 125,
-        totalOrdered: 7,
-        step: 0.5,
-        gramsPerUnit: 1000,
-        note: '7 kg total',
+        unit: 'kg', unitPrice: 125, totalOrdered: 7, step: 0.5,
+        gramsPerUnit: 1000, note: '7 kg total',
       },
       {
         code: 'MC0001',
         nameEN: 'Frozen Minced Beef IQF',
         nameCN: '冻碎牛肉',
-        unit: 'kg',
-        unitPrice: 125,
-        totalOrdered: 3,
-        step: 1,
-        gramsPerUnit: 1000,
-        note: '3 kg (1 kg packs)',
+        unit: 'kg', unitPrice: 125, totalOrdered: 3, step: 1,
+        gramsPerUnit: 1000, note: '3 kg (1 kg packs)',
       },
       {
         code: 'HA8036-IB',
         nameEN: 'Cooked Ham "BACIO" Half ~4.4 kg',
         nameCN: '熟火腿（半支）',
-        unit: 'kg',
-        unitPrice: 127,
-        totalOrdered: 4.4,
-        step: 0.5,
-        gramsPerUnit: 1000,
-        note: '4.4 kg total',
+        unit: 'kg', unitPrice: 127, totalOrdered: 4.4, step: 0.5,
+        gramsPerUnit: 1000, note: '4.4 kg total',
       },
       {
         code: 'TM0008-SK',
         nameEN: 'Angus Cube Roll MS2+ (Promo)',
         nameCN: '安格斯眼肉卷',
-        unit: 'kg',
-        unitPrice: 388,
-        totalOrdered: 6,
-        step: 0.5,
-        gramsPerUnit: 1000,
-        note: '6 kg total',
+        unit: 'kg', unitPrice: 388, totalOrdered: 6, step: 0.5,
+        gramsPerUnit: 1000, note: '6 kg total',
       },
     ],
   },
@@ -317,12 +334,8 @@ const categories = [
         code: 'ANS02',
         nameEN: 'Frozen Seabass Fillets IQF 120–160g',
         nameCN: '冻鲈鱼柳',
-        unit: 'kg',
-        unitPrice: 234,
-        totalOrdered: 5,
-        step: 0.5,
-        gramsPerUnit: 1000,
-        note: '5 kg (1 box)',
+        unit: 'kg', unitPrice: 234, totalOrdered: 5, step: 0.5,
+        gramsPerUnit: 1000, note: '5 kg (1 box)',
       },
     ],
   },
@@ -332,57 +345,37 @@ const categories = [
       {
         code: 'MZ2001',
         nameEN: 'Mozzarella Shredded 3 kg/tray (Mamma Tina)',
-        nameCN: '马苏里拉碎芝士 3公斤',
-        unit: 'tray',
-        unitPrice: 265,
-        totalOrdered: 1,
-        step: 1,
-        gramsPerUnit: 3000,
-        note: '1 tray = 3 kg',
+        nameCN: '马苏里拉碎芝士',
+        unit: 'tray', unitPrice: 265, totalOrdered: 1, step: 1,
+        gramsPerUnit: 3000, note: '1 tray = 3 kg',
       },
       {
         code: 'MZ5002',
         nameEN: 'Fiordilatte Napoli Cut 3 kg/tray (Mamma Tina)',
-        nameCN: '菲奥尔迪拉泰芝士 3公斤',
-        unit: 'tray',
-        unitPrice: 313,
-        totalOrdered: 1,
-        step: 1,
-        gramsPerUnit: 3000,
-        note: '1 tray = 3 kg',
+        nameCN: '菲奥尔迪拉泰芝士',
+        unit: 'kg', unitPrice: 104.33, totalOrdered: 3, step: 0.5,
+        gramsPerUnit: 1000, note: '3 kg total ($313/tray)',
       },
       {
         code: 'MZ0011',
         nameEN: 'Smoked Mozzarella Filone 1 kg (Mamma Tina)',
         nameCN: '烟熏马苏里拉芝士条',
-        unit: 'pc',
-        unitPrice: 98,
-        totalOrdered: 1,
-        step: 1,
-        gramsPerUnit: 1000,
-        note: '1 pc = 1 kg',
+        unit: 'pc', unitPrice: 98, totalOrdered: 1, step: 1,
+        gramsPerUnit: 1000, note: '1 pc = 1 kg',
       },
       {
         code: 'CF5007-IP',
         nameEN: 'Stracciatella "IL PARCO" 250g',
-        nameCN: '斯特拉奇亚泰拉芝士 250克',
-        unit: 'pc',
-        unitPrice: 52,
-        totalOrdered: 1,
-        step: 1,
-        gramsPerUnit: 250,
-        note: '1 pc = 250 g',
+        nameCN: '斯特拉奇亚泰拉芝士',
+        unit: 'pc', unitPrice: 52, totalOrdered: 1, step: 1,
+        gramsPerUnit: 250, note: '1 pc = 250 g',
       },
       {
         code: 'CF8001',
         nameEN: 'Cow Mozzarella "Ciresa" 125g',
-        nameCN: '奶牛马苏里拉芝士球 125克',
-        unit: 'pc',
-        unitPrice: 31,
-        totalOrdered: 12,
-        step: 1,
-        gramsPerUnit: 125,
-        note: '12 pcs available',
+        nameCN: '奶牛马苏里拉芝士球',
+        unit: 'pc', unitPrice: 31, totalOrdered: 12, step: 1,
+        gramsPerUnit: 125, note: '12 pcs available',
       },
     ],
   },
@@ -392,90 +385,58 @@ const categories = [
       {
         code: 'TMSO-2001',
         nameEN: 'San Marzano Whole Peeled Tomatoes DOP 2.5 kg',
-        nameCN: '圣马扎诺去皮番茄 DOP 2.5公斤',
-        unit: 'pc',
-        unitPrice: 81,
-        totalOrdered: 6,
-        step: 1,
-        gramsPerUnit: 2500,
-        note: '6 cans available',
+        nameCN: '圣马扎诺去皮番茄 DOP',
+        unit: 'pc', unitPrice: 81, totalOrdered: 6, step: 1,
+        gramsPerUnit: 2500, note: '6 cans available',
       },
       {
         code: 'QU0002',
         nameEN: 'Organic Tricolor Quinoa 500g',
-        nameCN: '有机三色藜麦 500克',
-        unit: 'pc',
-        unitPrice: 37,
-        totalOrdered: 4,
-        step: 1,
-        gramsPerUnit: 500,
-        note: '4 pcs available',
+        nameCN: '有机三色藜麦',
+        unit: 'pc', unitPrice: 37, totalOrdered: 4, step: 1,
+        gramsPerUnit: 500, note: '4 pcs available',
       },
       {
         code: 'GCRI-1047-A',
         nameEN: 'Lentils 400g (box of 12)',
-        nameCN: '意大利扁豆 400克×12罐',
-        unit: 'box',
-        unitPrice: 116,
-        totalOrdered: 12,
-        step: 1,
-        gramsPerUnit: 4800,
-        note: '12 boxes; 1 box = 12 × 400g',
+        nameCN: '意大利扁豆',
+        unit: 'box', unitPrice: 116, totalOrdered: 12, step: 1,
+        gramsPerUnit: 4800, note: '12 boxes · 1 box = 12 × 400g',
       },
       {
         code: 'GCRI-1048',
         nameEN: 'Black Beans Mexican Style 800g',
-        nameCN: '墨西哥风味黑豆 800克',
-        unit: 'pc',
-        unitPrice: 44,
-        totalOrdered: 12,
-        step: 1,
-        gramsPerUnit: 800,
-        note: '12 cans available',
+        nameCN: '墨西哥风味黑豆',
+        unit: 'pc', unitPrice: 44, totalOrdered: 12, step: 1,
+        gramsPerUnit: 800, note: '12 cans available',
       },
       {
         code: 'GCRI-1029',
         nameEN: 'Polenta Express 500g',
-        nameCN: '速食玉米粥粉 500克',
-        unit: 'pc',
-        unitPrice: 29,
-        totalOrdered: 2,
-        step: 1,
-        gramsPerUnit: 500,
-        note: '2 pcs available',
+        nameCN: '速食玉米粥粉',
+        unit: 'pc', unitPrice: 29, totalOrdered: 2, step: 1,
+        gramsPerUnit: 500, note: '2 pcs available',
       },
       {
         code: 'GCRI-1028',
         nameEN: 'Potato Flakes 5 kg',
-        nameCN: '马铃薯雪花粉 5公斤',
-        unit: 'pc',
-        unitPrice: 293,
-        totalOrdered: 1,
-        step: 1,
-        gramsPerUnit: 5000,
-        note: '1 bag = 5 kg',
+        nameCN: '马铃薯雪花粉',
+        unit: 'pc', unitPrice: 293, totalOrdered: 1, step: 1,
+        gramsPerUnit: 5000, note: '1 bag = 5 kg',
       },
       {
         code: 'GC0233-25',
         nameEN: 'Wheat Flour "0" MANITALY 25 kg',
-        nameCN: '意大利0号小麦粉 25公斤',
-        unit: 'pc',
-        unitPrice: 495,
-        totalOrdered: 1,
-        step: 1,
-        gramsPerUnit: 25000,
-        note: '1 bag = 25 kg',
+        nameCN: '意大利0号小麦粉',
+        unit: 'kg', unitPrice: 19.80, totalOrdered: 25, step: 1,
+        gramsPerUnit: 1000, note: '25 kg total ($495/bag)',
       },
       {
         code: 'FL204',
         nameEN: 'Dry Yeast Caputo 100g (box)',
-        nameCN: '卡普托干酵母 100克',
-        unit: 'box',
-        unitPrice: 300,
-        totalOrdered: 1,
-        step: 1,
-        gramsPerUnit: null,
-        note: '1 box',
+        nameCN: '卡普托干酵母',
+        unit: 'box', unitPrice: 300, totalOrdered: 1, step: 1,
+        gramsPerUnit: null, note: '1 box',
       },
     ],
   },
@@ -485,60 +446,41 @@ const categories = [
       {
         code: 'OL0509-IF',
         nameEN: 'Extra Virgin Olive Oil (Olitalia) 5 L',
-        nameCN: '特级初榨橄榄油 5升',
-        unit: 'pc',
-        unitPrice: 430,
-        totalOrdered: 1,
-        step: 1,
-        gramsPerUnit: null,     // liquid, skip per-100g
-        note: '1 tin = 5 L',
+        nameCN: '特级初榨橄榄油',
+        unit: 'L', unitPrice: 86, totalOrdered: 5, step: 0.5,
+        gramsPerUnit: null, note: '5 L total ($430/tin) · $86/L',
       },
       {
         code: 'GC0201-IF-A',
         nameEN: 'Sea Salt Fine Italy (box of 12 × 1 kg)',
-        nameCN: '意大利天然细海盐 1公斤×12袋',
-        unit: 'box',
-        unitPrice: 141,
-        totalOrdered: 1,
-        step: 1,
-        gramsPerUnit: 12000,
-        note: '1 box = 12 × 1 kg',
+        nameCN: '意大利天然细海盐',
+        unit: 'box', unitPrice: 141, totalOrdered: 1, step: 1,
+        gramsPerUnit: 12000, note: '1 box = 12 × 1 kg',
       },
     ],
   },
 ];
 
-// ─────────────────────────────────────────────
-// State: qty[code] = selected quantity
-// ─────────────────────────────────────────────
+// ── State ──
 const qty = {};
 
-function allItems() {
-  return categories.flatMap(c => c.items);
-}
-
-function getItem(code) {
-  return allItems().find(i => i.code === code);
-}
+function allItems() { return categories.flatMap(c => c.items); }
+function getItem(code) { return allItems().find(i => i.code === code); }
 
 function fmt(n) {
   return n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
-
 function fmtQty(item, q) {
-  if (item.unit === 'kg') return q === Math.floor(q) ? q + ' kg' : q + ' kg';
-  return q + ' ' + item.unit;
+  const u = item.unit;
+  const val = q % 1 === 0 ? q.toString() : q.toString();
+  return val + ' ' + u;
 }
-
 function per100g(item) {
   if (!item.gramsPerUnit) return null;
-  const pricePerGram = item.unitPrice / item.gramsPerUnit;
-  return pricePerGram * 100;
+  return (item.unitPrice / item.gramsPerUnit) * 100;
 }
 
-// ─────────────────────────────────────────────
-// Render
-// ─────────────────────────────────────────────
+// ── Render ──
 function render() {
   const container = document.getElementById('items-container');
   container.innerHTML = '';
@@ -550,15 +492,16 @@ function render() {
     container.appendChild(hdr);
 
     cat.items.forEach(item => {
-      if (!qty[item.code]) qty[item.code] = 0;
+      if (qty[item.code] === undefined) qty[item.code] = 0;
 
       const card = document.createElement('div');
       card.className = 'item-card';
-      card.id = 'card-' + item.code;
 
       const p100 = per100g(item);
-      const p100str = p100 !== null ? `$${fmt(p100)}<span class="price-100g">/100g</span>` : '';
-      const unitLabel = item.unit === 'kg' ? '/kg' : '/' + item.unit;
+      const p100str = p100 !== null
+        ? `<span class="price-sep">·</span><span class="price-100g">$${fmt(p100)}/100g</span>`
+        : '';
+      const unitLabel = '/' + item.unit;
 
       card.innerHTML = `
         <div class="item-info">
@@ -566,15 +509,15 @@ function render() {
           <div class="item-name-en">${item.nameEN}</div>
           <div class="item-code">${item.code}</div>
           <div class="item-pricing">
-            <span><strong>HKD $${item.unitPrice}${unitLabel}</strong></span>
+            <strong>HKD $${item.unitPrice % 1 === 0 ? item.unitPrice : item.unitPrice.toFixed(2)}${unitLabel}</strong>
             ${p100str}
           </div>
-          <div class="item-stock">Stock in order: ${fmtQty(item, item.totalOrdered)} &nbsp;·&nbsp; ${item.note}</div>
+          <div class="item-stock">In order: ${fmtQty(item, item.totalOrdered)} &nbsp;·&nbsp; ${item.note}</div>
         </div>
         <div class="qty-control">
           <div class="qty-buttons">
             <button class="qty-btn" onclick="changeQty('${item.code}', -1)">−</button>
-            <div class="qty-display" id="qty-${item.code}">${fmtQty(item, qty[item.code])}</div>
+            <div class="qty-display" id="qty-${item.code}">${fmtQty(item, 0)}</div>
             <button class="qty-btn" onclick="changeQty('${item.code}', 1)">+</button>
           </div>
           <div class="item-subtotal zero" id="sub-${item.code}">$0.00</div>
@@ -589,9 +532,8 @@ function render() {
 
 function changeQty(code, dir) {
   const item = getItem(code);
-  const current = qty[code] || 0;
-  const next = current + dir * item.step;
-  qty[code] = Math.min(item.totalOrdered, Math.max(0, Math.round(next * 10) / 10));
+  const next = (qty[code] || 0) + dir * item.step;
+  qty[code] = Math.min(item.totalOrdered, Math.max(0, Math.round(next * 100) / 100));
   updateItem(code);
   updateGrandTotal();
 }
@@ -600,40 +542,36 @@ function updateItem(code) {
   const item = getItem(code);
   const q = qty[code];
   const sub = q * item.unitPrice;
-
-  const qtyEl  = document.getElementById('qty-' + code);
-  const subEl  = document.getElementById('sub-' + code);
-  if (!qtyEl || !subEl) return;
-
-  qtyEl.textContent = fmtQty(item, q);
+  const qEl = document.getElementById('qty-' + code);
+  const sEl = document.getElementById('sub-' + code);
+  if (!qEl || !sEl) return;
+  qEl.textContent = fmtQty(item, q);
   if (sub > 0) {
-    subEl.textContent = 'HKD $' + fmt(sub);
-    subEl.classList.remove('zero');
+    sEl.textContent = 'HKD $' + fmt(sub);
+    sEl.classList.remove('zero');
   } else {
-    subEl.textContent = '$0.00';
-    subEl.classList.add('zero');
+    sEl.textContent = '$0.00';
+    sEl.classList.add('zero');
   }
 }
 
 function updateGrandTotal() {
-  const total = allItems().reduce((sum, item) => sum + (qty[item.code] || 0) * item.unitPrice, 0);
+  const total = allItems().reduce((s, i) => s + (qty[i.code] || 0) * i.unitPrice, 0);
   document.getElementById('grand-total').textContent = fmt(total);
 }
 
 function updateTotals() {
-  allItems().forEach(item => updateItem(item.code));
+  allItems().forEach(i => updateItem(i.code));
   updateGrandTotal();
 }
 
 function resetAll() {
-  allItems().forEach(item => { qty[item.code] = 0; });
+  allItems().forEach(i => { qty[i.code] = 0; });
   updateTotals();
 }
 
-// ─────────────────────────────────────────────
-// PDF Generation
-// ─────────────────────────────────────────────
-function generatePDF() {
+// ── PDF via html2canvas (preserves Chinese fonts) ──
+async function generatePDF() {
   const selected = allItems().filter(i => (qty[i.code] || 0) > 0);
   if (selected.length === 0) {
     alert('Please select at least one item.\n请先选择商品。');
@@ -642,127 +580,112 @@ function generatePDF() {
 
   const btn = document.getElementById('pdf-btn');
   btn.disabled = true;
-  btn.textContent = 'Generating...';
+  btn.textContent = '⏳ Generating...';
 
   try {
+    // Build print template HTML
+    const grandTotal = selected.reduce((s, i) => s + qty[i.code] * i.unitPrice, 0);
+
+    let rows = '';
+    selected.forEach(item => {
+      const q   = qty[item.code];
+      const sub = q * item.unitPrice;
+      const unitLabel = '/' + item.unit;
+      rows += `
+        <div class="pt-row">
+          <div>
+            <div class="pt-cn">${item.nameCN}</div>
+            <div class="pt-en">${item.nameEN}</div>
+            <div class="pt-code">${item.code}</div>
+          </div>
+          <div>$${item.unitPrice % 1 === 0 ? item.unitPrice : item.unitPrice.toFixed(2)}${unitLabel}</div>
+          <div>${fmtQty(item, q)}</div>
+          <div><strong>$${fmt(sub)}</strong></div>
+        </div>`;
+    });
+
+    const tpl = document.getElementById('pdf-template');
+    tpl.innerHTML = `
+      <div class="pt-header">
+        <h1>Order Share Summary &nbsp; 分单明细</h1>
+        <div class="pt-sub">林先生 Mr. Lin</div>
+        <div class="pt-meta">
+          订单号 Ref: ${ORDER_REF} &nbsp;·&nbsp; ${ORDER_DATE} &nbsp;·&nbsp; BrightView Total: ${ORDER_TOTAL}
+        </div>
+      </div>
+      <div class="pt-col-header">
+        <div>Item 商品</div>
+        <div>Unit Price 单价</div>
+        <div>Qty 数量</div>
+        <div>Subtotal 小计 (HKD)</div>
+      </div>
+      ${rows}
+      <div class="pt-total-row">
+        <div>TOTAL &nbsp; 合计</div>
+        <div></div>
+        <div></div>
+        <div>HKD $${fmt(grandTotal)}</div>
+      </div>
+      <div class="pt-footer">
+        Generated ${new Date().toLocaleString('en-HK')} &nbsp;·&nbsp; Prices in HKD, excl. VAT<br>
+        Bright View Trading HK Ltd &nbsp;·&nbsp; CUST-03021 (ELLABOOK CLOUD TECHNOLOGY LIMITED)
+      </div>
+    `;
+
+    tpl.style.display = 'block';
+
+    const canvas = await html2canvas(tpl, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      logging: false,
+    });
+
+    tpl.style.display = 'none';
+
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
     const pageW = 210;
-    const margin = 18;
-    const col = pageW - margin * 2;
-    let y = margin;
+    const pageH = 297;
+    const imgW  = pageW;
+    const imgH  = canvas.height * imgW / canvas.width;
+    const pageHeightPx = canvas.width * pageH / pageW;
 
-    // ── Header ──
-    doc.setFillColor(26, 58, 42);
-    doc.rect(0, 0, pageW, 36, 'F');
+    let yOffset = 0;
+    let pageNum = 0;
 
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Order Share Summary', margin, 16);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Ref: ' + ORDER_REF + '   |   ' + ORDER_DATE, margin, 24);
-    doc.text('Mr. Lin / \u6797\u5148\u751f', margin, 30);
+    while (yOffset < canvas.height) {
+      if (pageNum > 0) doc.addPage();
 
-    y = 46;
-    doc.setTextColor(26, 26, 26);
+      const sliceH = Math.min(pageHeightPx, canvas.height - yOffset);
+      const sliceCanvas = document.createElement('canvas');
+      sliceCanvas.width  = canvas.width;
+      sliceCanvas.height = sliceH;
+      sliceCanvas.getContext('2d').drawImage(
+        canvas, 0, yOffset, canvas.width, sliceH,
+        0, 0, canvas.width, sliceH
+      );
+      const sliceHeightMM = sliceH * pageW / canvas.width;
+      doc.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', 0, 0, pageW, sliceHeightMM);
 
-    // ── Column headers ──
-    doc.setFillColor(232, 228, 220);
-    doc.rect(margin, y - 5, col, 9, 'F');
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Item', margin + 1, y);
-    doc.text('Unit Price', margin + 80, y, { align: 'right' });
-    doc.text('Qty', margin + 110, y, { align: 'right' });
-    doc.text('Subtotal (HKD)', margin + col, y, { align: 'right' });
-    y += 8;
-
-    // ── Items ──
-    let grandTotal = 0;
-    selected.forEach((item, idx) => {
-      const q   = qty[item.code];
-      const sub = q * item.unitPrice;
-      grandTotal += sub;
-
-      if (idx % 2 === 0) {
-        doc.setFillColor(250, 250, 248);
-        doc.rect(margin, y - 4, col, 14, 'F');
-      }
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(26, 26, 26);
-
-      // EN name (truncated)
-      const enName = item.nameEN.length > 42 ? item.nameEN.slice(0, 42) + '…' : item.nameEN;
-      doc.text(enName, margin + 1, y);
-
-      // CN name (use unicode directly — basic CJK renders in helvetica as boxes, but it's the best we can do without embedding a font)
-      doc.setFontSize(8);
-      doc.setTextColor(80, 80, 80);
-      doc.text(item.code + '  ' + item.nameCN, margin + 1, y + 4.5);
-
-      // Price
-      doc.setFontSize(9);
-      doc.setTextColor(26, 26, 26);
-      const unitLabel = item.unit === 'kg' ? '/kg' : '/' + item.unit;
-      doc.text('$' + item.unitPrice + unitLabel, margin + 80, y, { align: 'right' });
-
-      // Qty
-      doc.text(fmtQty(item, q), margin + 110, y, { align: 'right' });
-
-      // Subtotal
-      doc.setFont('helvetica', 'bold');
-      doc.text('$' + fmt(sub), margin + col, y, { align: 'right' });
-
-      y += 14;
-
-      // Page break
-      if (y > 270 && idx < selected.length - 1) {
-        doc.addPage();
-        y = margin;
-      }
-    });
-
-    // ── Divider ──
-    doc.setDrawColor(26, 58, 42);
-    doc.setLineWidth(0.5);
-    doc.line(margin, y, margin + col, y);
-    y += 7;
-
-    // ── Grand total ──
-    doc.setFillColor(26, 58, 42);
-    doc.rect(margin, y - 5, col, 12, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.text('TOTAL', margin + 4, y + 2);
-    doc.text('HKD $' + fmt(grandTotal), margin + col, y + 2, { align: 'right' });
-    y += 18;
-
-    // ── Footer note ──
-    doc.setTextColor(120, 120, 120);
-    doc.setFontSize(7.5);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Generated ' + new Date().toLocaleString('en-HK') + '  ·  Prices in HKD, excl. VAT', margin, y);
-    doc.text('Bright View Trading HK Ltd  ·  CUST-03021 (ELLABOOK CLOUD TECHNOLOGY LIMITED)', margin, y + 5);
+      yOffset += pageHeightPx;
+      pageNum++;
+    }
 
     doc.save('MrLin_OrderShare_' + ORDER_REF + '.pdf');
+
   } catch (err) {
+    document.getElementById('pdf-template').style.display = 'none';
     console.error(err);
-    alert('PDF generation failed. Please try again.\nPDF生成失败，请重试。');
+    alert('PDF generation failed.\nPDF生成失败，请重试。');
   } finally {
     btn.disabled = false;
     btn.textContent = '📄 Save PDF';
   }
 }
 
-// ─────────────────────────────────────────────
-// Init
-// ─────────────────────────────────────────────
+// ── Init ──
 render();
 </script>
 </body>
