@@ -67,6 +67,33 @@
     }
     .invoice-btn:hover { background: rgba(255,255,255,0.22); }
 
+    /* ── WeChat tip toast ── */
+    .wechat-toast {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      background: rgba(0,0,0,0.82);
+      color: #fff;
+      padding: 18px 20px;
+      font-size: 0.85rem;
+      line-height: 1.6;
+      z-index: 999;
+      text-align: center;
+    }
+    .wechat-toast.show { display: block; }
+    .wechat-toast strong { display: block; font-size: 1rem; margin-bottom: 6px; }
+    .wechat-toast .close-tip {
+      display: inline-block;
+      margin-top: 12px;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.35);
+      color: #fff;
+      border-radius: 4px;
+      padding: 5px 18px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+
     /* ── Category headings ── */
     .category-header {
       background: #e8e4dc;
@@ -259,13 +286,21 @@
   <div class="header-meta">
     <span class="order-ref">SO26-024253 · 28 Apr 2026</span>
     <span class="order-total">BrightView Total: HKD $11,787.80</span>
-    <a class="invoice-btn" href="invoice-SO26-024253.pdf" download>
+    <a class="invoice-btn" href="invoice-SO26-024253.pdf" target="_blank" onclick="handleInvoiceClick(event)">
       ⬇ Invoice PDF
     </a>
   </div>
 </header>
 
 <div id="items-container"></div>
+
+<!-- WeChat tip overlay -->
+<div class="wechat-toast" id="wechat-toast">
+  <strong>⚠️ 微信内无法直接下载PDF</strong>
+  请点击右上角 <strong>···</strong> → <strong>在浏览器中打开</strong><br>
+  然后再点击 ⬇ Invoice PDF 下载
+  <br><span class="close-tip" onclick="document.getElementById('wechat-toast').classList.remove('show')">知道了 OK</span>
+</div>
 
 <!-- Hidden PDF render template -->
 <div id="pdf-template"></div>
@@ -421,8 +456,8 @@ const categories = [
         code: 'GCRI-1028',
         nameEN: 'Potato Flakes 5 kg',
         nameCN: '马铃薯雪花粉',
-        unit: 'pc', unitPrice: 293, totalOrdered: 1, step: 1,
-        gramsPerUnit: 5000, note: '1 bag = 5 kg',
+        unit: 'kg', unitPrice: 58.60, totalOrdered: 5, step: 0.5,
+        gramsPerUnit: 1000, note: '5 kg total ($293/bag)',
       },
       {
         code: 'GC0233-25',
@@ -683,6 +718,19 @@ async function generatePDF() {
     btn.disabled = false;
     btn.textContent = '📄 Save PDF';
   }
+}
+
+// ── WeChat detection ──
+function isWeChat() {
+  return /MicroMessenger/i.test(navigator.userAgent);
+}
+
+function handleInvoiceClick(e) {
+  if (isWeChat()) {
+    e.preventDefault();
+    document.getElementById('wechat-toast').classList.add('show');
+  }
+  // non-WeChat: opens in new tab normally
 }
 
 // ── Init ──
