@@ -107,7 +107,25 @@
       position: sticky;
       top: 0;
       z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
+    .take-all-btn {
+      background: #1a3a2a;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 3px 10px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      text-transform: none;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    .take-all-btn:hover { background: #2a5a3a; }
 
     /* ── Item card ── */
     .item-card {
@@ -523,7 +541,12 @@ function render() {
   categories.forEach(cat => {
     const hdr = document.createElement('div');
     hdr.className = 'category-header';
-    hdr.textContent = cat.label;
+    const catId = cat.label.replace(/\s+/g, '-');
+    hdr.innerHTML = `
+      <span>${cat.label}</span>
+      <button class="take-all-btn" onclick="takeAllCategory('${catId}')">Take All 全要</button>
+    `;
+    hdr.querySelector('.take-all-btn').dataset.catId = catId;
     container.appendChild(hdr);
 
     cat.items.forEach(item => {
@@ -531,6 +554,7 @@ function render() {
 
       const card = document.createElement('div');
       card.className = 'item-card';
+      card.dataset.catId = catId;
 
       const p100 = per100g(item);
       const p100str = p100 !== null
@@ -610,6 +634,23 @@ function updateTotals() {
 function resetAll() {
   allItems().forEach(i => { qty[i.code] = 0; });
   updateTotals();
+}
+
+function takeAllCategory(catId) {
+  // Find all item cards with this catId
+  document.querySelectorAll(`.item-card[data-cat-id="${catId}"]`).forEach(card => {
+    const code = card.id.replace('card-', '');
+    // card id not set — find code from qty-display id inside
+    const qtyEl = card.querySelector('[id^="qty-"]');
+    if (!qtyEl) return;
+    const itemCode = qtyEl.id.replace('qty-', '');
+    const item = getItem(itemCode);
+    if (item) {
+      qty[itemCode] = item.totalOrdered;
+      updateItem(itemCode);
+    }
+  });
+  updateGrandTotal();
 }
 
 // ── PDF via html2canvas (preserves Chinese fonts) ──
