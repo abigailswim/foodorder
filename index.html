@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Order Share 分单 — SO26-024253</title>
+  <title>Order Share 分单 — BA260405801</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
@@ -286,8 +286,8 @@
   <div class="header-meta">
     <span class="order-ref">SO26-024253 · 28 Apr 2026</span>
     <span class="order-total">BrightView Total: HKD $11,787.80</span>
-    <a class="invoice-btn" href="invoice-SO26-024253.pdf" target="_blank" onclick="handleInvoiceClick(event)">
-      ⬇ Invoice PDF
+    <a class="invoice-btn" href="invoice-BA260405801.pdf" target="_blank" onclick="handleInvoiceClick(event)">
+      ⬇ Delivery Invoice
     </a>
   </div>
 </header>
@@ -317,9 +317,9 @@
 </div>
 
 <script>
-const ORDER_DATE  = '28 Apr 2026';
-const ORDER_REF   = 'SO26-024253';
-const ORDER_TOTAL = 'HKD $11,787.80';
+const ORDER_DATE  = '29 Apr 2026';
+const ORDER_REF   = 'BA260405801';
+const ORDER_TOTAL = 'HKD $10,605.08';
 
 const categories = [
   {
@@ -329,15 +329,15 @@ const categories = [
         code: 'VLFR31863',
         nameEN: 'Frozen Veal Ossobuco Portion ~300g×3',
         nameCN: '冻小牛膝片',
-        unit: 'kg', unitPrice: 222, totalOrdered: 5, step: 0.5,
-        gramsPerUnit: 1000, note: '5 kg total',
+        unit: 'kg', unitPrice: 222, totalOrdered: 5.5, step: 0.5,
+        gramsPerUnit: 1000, note: '5.5 kg delivered',
       },
       {
         code: 'BFFR34855',
         nameEN: 'Frozen Grass-Fed Beef Brisket',
         nameCN: '冻草饲牛胸肉',
-        unit: 'kg', unitPrice: 125, totalOrdered: 7, step: 0.5,
-        gramsPerUnit: 1000, note: '7 kg total',
+        unit: 'kg', unitPrice: 125, totalOrdered: 10.5, step: 0.5,
+        gramsPerUnit: 1000, note: '10.5 kg delivered',
       },
       {
         code: 'MC0001',
@@ -350,15 +350,15 @@ const categories = [
         code: 'HA8036-IB',
         nameEN: 'Cooked Ham "BACIO" Half ~4.4 kg',
         nameCN: '熟火腿（半支）',
-        unit: 'kg', unitPrice: 127, totalOrdered: 4.4, step: 0.5,
-        gramsPerUnit: 1000, note: '4.4 kg total',
+        unit: 'kg', unitPrice: 127, totalOrdered: 4.94, step: 0.5,
+        gramsPerUnit: 1000, note: '4.94 kg delivered',
       },
       {
         code: 'TM0008-SK',
         nameEN: 'Angus Cube Roll MS2+ (Promo)',
         nameCN: '安格斯眼肉卷',
-        unit: 'kg', unitPrice: 388, totalOrdered: 6, step: 0.5,
-        gramsPerUnit: 1000, note: '6 kg total',
+        unit: 'kg', unitPrice: 388, totalOrdered: 4.65, step: 0.5,
+        gramsPerUnit: 1000, note: '4.65 kg delivered',
       },
     ],
   },
@@ -435,8 +435,8 @@ const categories = [
         code: 'GCRI-1047-A',
         nameEN: 'Lentils 400g (box of 12)',
         nameCN: '意大利扁豆',
-        unit: 'box', unitPrice: 116, totalOrdered: 12, step: 1,
-        gramsPerUnit: 4800, note: '12 boxes · 1 box = 12 × 400g',
+        unit: 'box', unitPrice: 116, totalOrdered: 1, step: 1,
+        gramsPerUnit: 4800, note: '1 box delivered = 12 × 400g',
       },
       {
         code: 'GCRI-1048',
@@ -567,8 +567,15 @@ function render() {
 
 function changeQty(code, dir) {
   const item = getItem(code);
-  const next = (qty[code] || 0) + dir * item.step;
-  qty[code] = Math.min(item.totalOrdered, Math.max(0, Math.round(next * 100) / 100));
+  const current = qty[code] || 0;
+  if (dir > 0) {
+    const next = Math.round((current + item.step) * 100) / 100;
+    // If next step overshoots but we haven't reached max yet, snap to max
+    qty[code] = next > item.totalOrdered ? item.totalOrdered : next;
+  } else {
+    const next = Math.round((current - item.step) * 100) / 100;
+    qty[code] = Math.max(0, next);
+  }
   updateItem(code);
   updateGrandTotal();
 }
